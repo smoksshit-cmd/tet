@@ -1,51 +1,74 @@
 import { eventSource, event_types } from '../../../../script.js';
 
-/* ========== КНОПКА (перетаскиваемая) ========== */
+/* ── ВСПОМОГАТЕЛЬНАЯ ── */
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(v, hi)); }
+function $(id) { return document.getElementById(id); }
+
+/* ══════════════ КНОПКА ══════════════ */
 const btn = document.createElement('div');
 btn.className = 'bb-btn fa-solid fa-gamepad';
 btn.title = 'Block Blast';
 document.body.appendChild(btn);
 
 // Восстановить позицию
-const savedPos = (() => { try { return JSON.parse(localStorage.getItem('bb_btn_pos')); } catch { return null; } })();
-if (savedPos) {
-    btn.style.bottom = ''; btn.style.right = '';
-    btn.style.top = savedPos.top; btn.style.left = savedPos.left;
-} 
+const _saved = (() => { try { return JSON.parse(localStorage.getItem('bb_btn_pos3')); } catch { return null; } })();
+if (_saved) {
+    // валидируем — экран мог изменить размер
+    const lv = parseFloat(_saved.left), tv = parseFloat(_saved.top);
+    if (lv >= 0 && lv < window.innerWidth - 30 && tv >= 0 && tv < window.innerHeight - 30) {
+        btn.style.bottom = ''; btn.style.right = '';
+        btn.style.left = lv + 'px'; btn.style.top = tv + 'px';
+    }
+}
 
-// Drag
-let dragging = false, moved = false, ox = 0, oy = 0;
+function saveBtnPos() {
+    localStorage.setItem('bb_btn_pos3', JSON.stringify({ left: btn.style.left, top: btn.style.top }));
+}
+function moveBtn(cx, cy, ox, oy) {
+    const bw = btn.offsetWidth  || 48;
+    const bh = btn.offsetHeight || 48;
+    btn.style.left   = clamp(cx - ox, 0, window.innerWidth  - bw) + 'px';
+    btn.style.top    = clamp(cy - oy, 0, window.innerHeight - bh) + 'px';
+    btn.style.right  = '';
+    btn.style.bottom = '';
+}
 
+let _drag = false, _moved = false, _ox = 0, _oy = 0;
+
+// MOUSE drag
 btn.addEventListener('mousedown', e => {
     if (e.button !== 0) return;
-    dragging = true; moved = false;
+    _drag = true; _moved = false;
     const r = btn.getBoundingClientRect();
-    ox = e.clientX - r.left;
-    oy = e.clientY - r.top;
-    btn.style.opacity = '0.6';
-    btn.style.cursor = 'grabbing';
-    e.preventDefault();
+    _ox = e.clientX - r.left; _oy = e.clientY - r.top;
+    btn.style.opacity = '0.65'; e.preventDefault();
 });
 document.addEventListener('mousemove', e => {
-    if (!dragging) return;
-    moved = true;
-    const nx = Math.max(0, Math.min(e.clientX - ox, window.innerWidth  - btn.offsetWidth));
-    const ny = Math.max(0, Math.min(e.clientY - oy, window.innerHeight - btn.offsetHeight));
-    btn.style.left = nx + 'px'; btn.style.top = ny + 'px';
-    btn.style.right = ''; btn.style.bottom = '';
-    e.preventDefault();
+    if (!_drag) return; _moved = true;
+    moveBtn(e.clientX, e.clientY, _ox, _oy); e.preventDefault();
 });
 document.addEventListener('mouseup', () => {
-    if (!dragging) return;
-    dragging = false;
-    btn.style.opacity = ''; btn.style.cursor = '';
-    if (moved) {
-        localStorage.setItem('bb_btn_pos', JSON.stringify({ top: btn.style.top, left: btn.style.left }));
-        moved = false;
-    }
+    if (!_drag) return; _drag = false; btn.style.opacity = '';
+    if (_moved) { saveBtnPos(); _moved = false; }
 });
 
-/* ========== ПАНЕЛЬ ========== */
+// TOUCH drag
+btn.addEventListener('touchstart', e => {
+    _drag = true; _moved = false;
+    const t = e.touches[0], r = btn.getBoundingClientRect();
+    _ox = t.clientX - r.left; _oy = t.clientY - r.top;
+}, { passive: true });
+document.addEventListener('touchmove', e => {
+    if (!_drag) return; _moved = true;
+    const t = e.touches[0];
+    moveBtn(t.clientX, t.clientY, _ox, _oy); e.preventDefault();
+}, { passive: false });
+document.addEventListener('touchend', () => {
+    if (!_drag) return; _drag = false;
+    if (_moved) { saveBtnPos(); _moved = false; }
+});
+
+/* ══════════════ ПАНЕЛЬ ══════════════ */
 const panel = document.createElement('div');
 panel.className = 'bb-panel';
 panel.innerHTML = `
@@ -65,8 +88,8 @@ panel.innerHTML = `
     <button id="bb-again">Play Again</button>
   </div>
 </div>
-<div class="bb-msg" id="bb-msg">Select a piece, then click the board</div>
-<div class="bb-pieces" id="bb-pieces">
+<div class="bb-msg" id="bb-msg">Select a piece, then tap the board</div>
+<div class="bb-pieces">
   <div class="bb-slot" id="bb-s0"></div>
   <div class="bb-slot" id="bb-s1"></div>
   <div class="bb-slot" id="bb-s2"></div>
@@ -74,44 +97,42 @@ panel.innerHTML = `
 `;
 document.body.appendChild(panel);
 
-// Позиционировать панель рядом с кнопкой
+// Позиция панели
 function positionPanel() {
-    const r = btn.getBoundingClientRect();
-    const pw = 320, ph = panel.offsetHeight || 500;
-    let left = r.right + 10 + pw <= window.innerWidth ? r.right + 10
-             : r.left - pw - 10 >= 0               ? r.left - pw - 10
-             : Math.max(10, (window.innerWidth - pw) / 2);
-    let top  = Math.max(10, Math.min(r.top, window.innerHeight - ph - 10));
+    const r   = btn.getBoundingClientRect();
+    const vw  = window.innerWidth, vh = window.innerHeight;
+    const pw  = Math.min(320, vw - 20);
+    panel.style.width = pw + 'px';
+    const ph  = panel.offsetHeight || 500;
+    let left  = r.right + 10 + pw <= vw ? r.right + 10
+              : r.left - pw - 10 >= 0   ? r.left - pw - 10
+              : Math.max(10, (vw - pw) / 2);
+    let top   = clamp(r.top, 10, vh - ph - 10);
     panel.style.left = left + 'px';
     panel.style.top  = top  + 'px';
 }
 
-// Открытие/закрытие — ТОЛЬКО по кнопке, не закрывается при кликах внутри
 let panelOpen = false;
-btn.addEventListener('click', e => {
-    if (moved) return; // был drag — не открывать
-    e.stopPropagation();
-    panelOpen = !panelOpen;
-    panel.classList.toggle('open', panelOpen);
-    if (panelOpen) positionPanel();
-});
+function openPanel()  { panelOpen = true;  panel.classList.add('open');    positionPanel(); }
+function closePanel() { panelOpen = false; panel.classList.remove('open'); }
 
-// Закрытие ТОЛЬКО при клике СТРОГО вне панели и вне кнопки
-document.addEventListener('click', e => {
-    if (!panelOpen) return;
-    if (panel.contains(e.target) || btn.contains(e.target)) return;
-    panelOpen = false;
-    panel.classList.remove('open');
-}, true); // capture=true чтобы поймать до stopPropagation внутри игры
+btn.addEventListener('click',      e => { if (_moved) return; e.stopPropagation(); panelOpen ? closePanel() : openPanel(); });
+btn.addEventListener('touchend',   e => { if (_moved) return; e.preventDefault(); e.stopPropagation(); panelOpen ? closePanel() : openPanel(); });
+
+// Закрытие при клике вне (НЕ capture, panel сама глотает клики)
+panel.addEventListener('click',     e => e.stopPropagation());
+panel.addEventListener('touchend',  e => e.stopPropagation());
+document.addEventListener('click',  () => { if (panelOpen) closePanel(); });
+document.addEventListener('touchend', () => { if (panelOpen) closePanel(); });
 
 window.addEventListener('resize', () => { if (panelOpen) positionPanel(); });
 
-/* генерация — подсветка кнопки */
+/* генерация */
 eventSource.on(event_types.GENERATION_STARTED, () => btn.classList.add('bb-gen'));
 eventSource.on(event_types.GENERATION_ENDED,   () => btn.classList.remove('bb-gen'));
 eventSource.on(event_types.GENERATION_STOPPED, () => btn.classList.remove('bb-gen'));
 
-/* ========== ИГРА ========== */
+/* ══════════════ ИГРА ══════════════ */
 const ROWS = 8, COLS = 8;
 const COLORS = ['#e94560','#f5a623','#4caf50','#2196f3','#9c27b0','#00bcd4','#ff5722','#e91e63'];
 const SHAPES = [
@@ -130,16 +151,14 @@ let board, score, pieces, sel, dead;
 let best = +localStorage.getItem('bb_best_v3') || 0;
 $('bb-best').textContent = best;
 
-const rnd  = n => Math.floor(Math.random() * n);
-const sum  = n => n.flat().reduce((a,v) => a+v, 0);
+const rnd = n => Math.floor(Math.random() * n);
+const sum = n => n.flat().reduce((a,v) => a+v, 0);
 
 function canPlace(shape, row, col) {
     for (let r = 0; r < shape.length; r++)
         for (let c = 0; c < shape[r].length; c++)
-            if (shape[r][c]) {
-                if (row+r >= ROWS || col+c >= COLS) return false;
-                if (board[row+r][col+c]) return false;
-            }
+            if (shape[r][c] && (row+r >= ROWS || col+c >= COLS || board[row+r][col+c]))
+                return false;
     return true;
 }
 function fitsAnywhere(shape) {
@@ -154,27 +173,24 @@ function newGame() {
     score = 0; sel = null; dead = false;
     $('bb-score').textContent = '0';
     $('bb-over').classList.remove('show');
-    msg('Select a piece, then click the board');
+    msg('Select a piece, then tap the board');
     drawBoard(); spawn();
 }
-
 function spawn() {
-    pieces = [mkPiece(), mkPiece(), mkPiece()];
-    sel = null; drawPieces();
+    pieces = [mkP(), mkP(), mkP()]; sel = null; drawPieces();
     if (!pieces.some(p => fitsAnywhere(p.shape))) gameOver();
 }
-function mkPiece() {
-    return { shape: SHAPES[rnd(SHAPES.length)], color: COLORS[rnd(COLORS.length)], used: false };
-}
+function mkP() { return { shape: SHAPES[rnd(SHAPES.length)], color: COLORS[rnd(COLORS.length)], used: false }; }
 
-function pick(i) {
+function pick(i, e) {
+    e.stopPropagation();
     if (pieces[i].used || dead) return;
     sel = i; drawPieces();
-    msg('Click a cell to place the piece');
+    msg('Tap a cell on the board to place it');
 }
 
 function place(row, col, e) {
-    e.stopPropagation(); // ← не даём клику дойти до document и закрыть панель
+    e.stopPropagation();
     if (sel === null || dead) return;
     const p = pieces[sel];
     if (!canPlace(p.shape, row, col)) { msg("Can't place here!", 'bad'); return; }
@@ -186,49 +202,36 @@ function place(row, col, e) {
     const cleared = clearLines();
     score += cleared * 20;
     updateScore();
-    drawBoard();   // перерисовываем ПОСЛЕ всех вычислений
-    drawPieces();
     sel = null;
+    drawBoard(); drawPieces();
     if (cleared) msg(`+${cleared} line${cleared>1?'s':''} cleared! 🎉`, 'good');
-    else msg('Select a piece, then click the board');
+    else msg('Select a piece, then tap the board');
     if (pieces.every(p => p.used)) spawn();
     else if (!pieces.filter(p=>!p.used).some(p => fitsAnywhere(p.shape))) gameOver();
 }
 
 function clearLines() {
     const flash = new Set();
-    for (let r = 0; r < ROWS; r++)
-        if (board[r].every(v=>v)) for (let c = 0; c < COLS; c++) flash.add(`${r}_${c}`);
-    for (let c = 0; c < COLS; c++)
-        if (board.every(row=>row[c])) for (let r = 0; r < ROWS; r++) flash.add(`${r}_${c}`);
-    let linesCleared = 0;
-    if (flash.size) {
-        // считаем полные строки и столбцы
-        let rows = new Set(), cols = new Set();
-        flash.forEach(k => { const [r,c] = k.split('_'); rows.add(r); cols.add(c); });
-        // строка полная если все 8 клеток в flash
-        for (const r of rows) if ([...Array(COLS).keys()].every(c => flash.has(`${r}_${c}`))) linesCleared++;
-        for (const c of cols) if ([...Array(ROWS).keys()].every(r => flash.has(`${r}_${c}`))) linesCleared++;
-
-        flash.forEach(k => {
-            const [r,c] = k.split('_').map(Number);
-            const el = $('bb-board').querySelector(`[data-r="${r}"][data-c="${c}"]`);
-            if (el) { el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'),300); }
-            board[r][c] = null;
-        });
-    }
-    return linesCleared;
+    for (let r = 0; r < ROWS; r++) if (board[r].every(v=>v))   for (let c=0;c<COLS;c++) flash.add(`${r}_${c}`);
+    for (let c = 0; c < COLS; c++) if (board.every(row=>row[c])) for (let r=0;r<ROWS;r++) flash.add(`${r}_${c}`);
+    let rows = new Set(), cols = new Set();
+    flash.forEach(k => { const [r,c] = k.split('_'); rows.add(r); cols.add(c); });
+    let cleared = 0;
+    for (const r of rows) if ([...Array(COLS).keys()].every(c => flash.has(`${r}_${c}`))) cleared++;
+    for (const c of cols) if ([...Array(ROWS).keys()].every(r => flash.has(`${r}_${c}`))) cleared++;
+    flash.forEach(k => {
+        const [r,c] = k.split('_').map(Number);
+        const el = $('bb-board') && $('bb-board').querySelector(`[data-r="${r}"][data-c="${c}"]`);
+        if (el) { el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'),300); }
+        board[r][c] = null;
+    });
+    return cleared;
 }
 
 function updateScore() {
     $('bb-score').textContent = score;
-    if (score > best) {
-        best = score;
-        localStorage.setItem('bb_best_v3', best);
-        $('bb-best').textContent = best;
-    }
+    if (score > best) { best = score; localStorage.setItem('bb_best_v3', best); $('bb-best').textContent = best; }
 }
-
 function gameOver() {
     dead = true;
     $('bb-final').textContent = `Score: ${score}  •  Best: ${best}`;
@@ -244,7 +247,8 @@ function drawBoard() {
             el.className = 'bb-cell' + (board[r][c] ? ' filled' : '');
             if (board[r][c]) el.style.background = board[r][c];
             el.dataset.r = r; el.dataset.c = c;
-            el.addEventListener('click',      ev => place(r, c, ev));
+            el.addEventListener('click',    ev => place(r, c, ev));
+            el.addEventListener('touchend', ev => { ev.preventDefault(); place(r, c, ev); });
             el.addEventListener('mouseenter', () => showGhost(r, c));
             el.addEventListener('mouseleave', clearGhost);
             brd.appendChild(el);
@@ -277,7 +281,12 @@ function drawPieces() {
         slot.innerHTML = '';
         const p = pieces[i];
         slot.className = 'bb-slot' + (p.used ? ' used' : '') + (sel===i ? ' selected' : '');
-        slot.onclick = e => { e.stopPropagation(); pick(i); };
+        // удаляем старые слушатели заменой ноды
+        const newSlot = slot.cloneNode(false);
+        slot.parentNode.replaceChild(newSlot, slot);
+        newSlot.id = `bb-s${i}`;
+        newSlot.addEventListener('click',    ev => pick(i, ev));
+        newSlot.addEventListener('touchend', ev => { ev.preventDefault(); pick(i, ev); });
         if (!p.used) {
             const g = document.createElement('div');
             g.className = 'bb-pgrid';
@@ -289,20 +298,18 @@ function drawPieces() {
                 if (!v) cell.style.boxShadow = 'none';
                 g.appendChild(cell);
             }));
-            slot.appendChild(g);
+            newSlot.appendChild(g);
         }
     }
 }
 
 function msg(text, type) {
-    const el = $('bb-msg');
-    el.textContent = text;
+    const el = $('bb-msg'); el.textContent = text;
     el.className = 'bb-msg' + (type ? ` ${type}` : '');
 }
-function $(id) { return document.getElementById(id); }
 
-$('bb-again').addEventListener('click', e => { e.stopPropagation(); newGame(); });
-panel.addEventListener('click', e => e.stopPropagation()); // блокируем всплытие от всей панели
+$('bb-again').addEventListener('click',    e => { e.stopPropagation(); newGame(); });
+$('bb-again').addEventListener('touchend', e => { e.preventDefault(); e.stopPropagation(); newGame(); });
 
 newGame();
-console.log('🎮 [BlockBlast] Ready!');
+console.log('🎮 [BlockBlast] v1.2 Ready!');
