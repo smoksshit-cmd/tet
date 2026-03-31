@@ -55,37 +55,33 @@
     border-radius: 3px; transition: background 0.06s; touch-action: none;
 }
 .bb-cell.filled { box-shadow: inset 0 -3px rgba(0,0,0,0.3); }
-.bb-cell.ghost  { opacity: 0.5; }
+.bb-cell.ghost  { opacity: 0.45; }
 .bb-cell.flash  { animation: bb-flash 0.28s; }
 @keyframes bb-flash { 0%{filter:brightness(4)} 100%{filter:brightness(1)} }
 
 .bb-pieces {
     display: flex; justify-content: space-around;
-    align-items: flex-end; width: 100%;
-    min-height: 68px; gap: 2px;
+    align-items: flex-end; width: 100%; min-height: 68px; gap: 2px;
 }
 .bb-slot {
     flex: 1; display: flex; justify-content: center; align-items: center;
     min-height: 64px; border: 2px dashed rgba(255,255,255,0.1);
-    border-radius: 8px; cursor: grab; touch-action: none;
-    padding: 4px 2px; transition: opacity 0.15s;
-    -webkit-tap-highlight-color: transparent;
+    border-radius: 8px; cursor: grab; touch-action: none; padding: 4px 2px;
+    transition: opacity 0.15s; -webkit-tap-highlight-color: transparent;
 }
 .bb-slot.used     { opacity: 0.12; cursor: not-allowed; }
-.bb-slot.dragging { opacity: 0.3; }
+.bb-slot.dragging { opacity: 0.25; }
 .bb-pgrid { display: grid; gap: 2px; pointer-events: none; }
 .bb-pcell { border-radius: 3px; box-shadow: inset 0 -2px rgba(0,0,0,0.28); pointer-events: none; }
 
-/* Ghost плавает НАД пальцем — немного сверху, чтобы видеть куда кладёшь */
+/* ghost следует за пальцем */
 .bb-drag-ghost {
-    position: fixed; pointer-events: none;
-    z-index: 99999; display: grid; gap: 3px;
-    opacity: 0.9;
-    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.6));
-    transition: opacity 0.05s;
+    position: fixed; pointer-events: none; z-index: 99999;
+    display: grid; gap: 3px; opacity: 0.88;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
 }
 .bb-dc {
-    width: 30px; height: 30px; border-radius: 4px;
+    width: 28px; height: 28px; border-radius: 4px;
     box-shadow: inset 0 -3px rgba(0,0,0,0.3); pointer-events: none;
 }
 
@@ -94,18 +90,16 @@
 .bb-msg.bad  { color: #e94560; }
 
 .bb-over {
-    display: none; position: absolute; inset: 0;
-    border-radius: 7px; background: rgba(12,12,24,0.93);
-    flex-direction: column; align-items: center;
-    justify-content: center; gap: 8px; z-index: 5;
+    display: none; position: absolute; inset: 0; border-radius: 7px;
+    background: rgba(12,12,24,0.93); flex-direction: column;
+    align-items: center; justify-content: center; gap: 8px; z-index: 5;
 }
 .bb-over.show { display: flex; }
 .bb-over h3 { color: #e94560; margin: 0; font-size: 18px; }
 .bb-over p  { color: #888; margin: 0; font-size: 12px; }
 .bb-over button {
     background: #e94560; color: #fff; border: none;
-    padding: 7px 22px; border-radius: 16px;
-    cursor: pointer; font-size: 13px; font-weight: bold;
-    touch-action: manipulation;
+    padding: 7px 22px; border-radius: 16px; cursor: pointer;
+    font-size: 13px; font-weight: bold; touch-action: manipulation;
 }
 .bb-over button:hover { background: #c73652; }
