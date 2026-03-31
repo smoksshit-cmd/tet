@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Block Blast – SillyTavern Break",
+  "version": "1.0",
+  "description": "Play Block Blast while waiting for SillyTavern responses",
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "icon.png"
+    }
+  },
+  "icons": {
+    "48": "icon.png"
+  }
+}
