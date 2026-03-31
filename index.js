@@ -1,10 +1,9 @@
 import { eventSource, event_types } from '../../../../script.js';
 
-/* ─── util ─── */
 const $ = id => document.getElementById(id);
-const clamp = (v,a,b) => Math.max(a, Math.min(v, b));
+const GHOST_CELL = 28; // размер ячейки в плавающем ghost (px, должен совпадать с CSS)
 
-/* ══ КНОПКА (фиксированная) ══ */
+/* ══ КНОПКА ══ */
 const btn = document.createElement('div');
 btn.className = 'bb-btn fa-solid fa-gamepad';
 btn.title = 'Block Blast';
@@ -37,7 +36,7 @@ panel.innerHTML = `
 </div>`;
 document.body.appendChild(panel);
 
-/* открытие/закрытие */
+/* ── открытие/закрытие ── */
 let panelOpen = false;
 btn.addEventListener('click', e => {
     e.stopPropagation();
@@ -69,15 +68,15 @@ const SHAPES=[
 ];
 
 let board, score, pieces, dead;
-let best = +localStorage.getItem('bb_best_v4') || 0;
+let best = +localStorage.getItem('bb_best_v5') || 0;
 $('bb-best').textContent = best;
 const rnd = n => Math.floor(Math.random()*n);
 const sum = n => n.flat().reduce((a,v)=>a+v,0);
 
-function canPlace(shape, row, col) {
-    for (let r=0; r<shape.length; r++)
-        for (let c=0; c<shape[r].length; c++)
-            if (shape[r][c] && (row+r>=ROWS || col+c>=COLS || board[row+r][col+c])) return false;
+function canPlace(shape, r, c) {
+    for (let dr=0; dr<shape.length; dr++)
+        for (let dc=0; dc<shape[dr].length; dc++)
+            if (shape[dr][dc] && (r+dr>=ROWS || c+dc>=COLS || board[r+dr][c+dc])) return false;
     return true;
 }
 function fitsAnywhere(shape) {
@@ -94,18 +93,17 @@ function newGame() {
     drawBoard(); spawn();
 }
 function spawn() {
-    pieces=[mkP(),mkP(),mkP()];
-    drawPieces();
+    pieces=[mkP(),mkP(),mkP()]; drawPieces();
     if (!pieces.some(p=>fitsAnywhere(p.shape))) gameOver();
 }
-function mkP(){ return {shape:SHAPES[rnd(SHAPES.length)],color:COLORS[rnd(COLORS.length)],used:false}; }
+function mkP() { return {shape:SHAPES[rnd(SHAPES.length)],color:COLORS[rnd(COLORS.length)],used:false}; }
 
 function doPlace(pIdx, row, col) {
     const p = pieces[pIdx];
-    if (!canPlace(p.shape, row, col)) { msg("Can't place here!", 'bad'); return false; }
-    for (let r=0;r<p.shape.length;r++)
-        for (let c=0;c<p.shape[r].length;c++)
-            if (p.shape[r][c]) board[row+r][col+c]=p.color;
+    if (!canPlace(p.shape, row, col)) { msg("Can't place here!",'bad'); return false; }
+    for (let dr=0;dr<p.shape.length;dr++)
+        for (let dc=0;dc<p.shape[dr].length;dc++)
+            if (p.shape[dr][dc]) board[row+dr][col+dc]=p.color;
     p.used=true;
     score+=sum(p.shape);
     const cl=clearLines(); score+=cl*20;
@@ -119,16 +117,15 @@ function doPlace(pIdx, row, col) {
 
 function clearLines() {
     const f=new Set();
-    for (let r=0;r<ROWS;r++) if (board[r].every(v=>v)) for(let c=0;c<COLS;c++) f.add(`${r}_${c}`);
-    for (let c=0;c<COLS;c++) if (board.every(row=>row[c])) for(let r=0;r<ROWS;r++) f.add(`${r}_${c}`);
-    let rows=new Set(),cols=new Set();
+    for(let r=0;r<ROWS;r++) if(board[r].every(v=>v)) for(let c=0;c<COLS;c++) f.add(`${r}_${c}`);
+    for(let c=0;c<COLS;c++) if(board.every(row=>row[c])) for(let r=0;r<ROWS;r++) f.add(`${r}_${c}`);
+    let rows=new Set(), cols=new Set();
     f.forEach(k=>{const[r,c]=k.split('_');rows.add(r);cols.add(c);});
     let cl=0;
     for(const r of rows) if([...Array(COLS).keys()].every(c=>f.has(`${r}_${c}`))) cl++;
     for(const c of cols) if([...Array(ROWS).keys()].every(r=>f.has(`${r}_${c}`))) cl++;
     f.forEach(k=>{
-        const[r,c]=k.split('_').map(Number);
-        board[r][c]=null;
+        const[r,c]=k.split('_').map(Number); board[r][c]=null;
         const el=$('bb-board')?.querySelector(`[data-r="${r}"][data-c="${c}"]`);
         if(el){el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),300);}
     });
@@ -136,7 +133,7 @@ function clearLines() {
 }
 function updateScore() {
     $('bb-score').textContent=score;
-    if(score>best){best=score;localStorage.setItem('bb_best_v4',best);$('bb-best').textContent=best;}
+    if(score>best){best=score;localStorage.setItem('bb_best_v5',best);$('bb-best').textContent=best;}
 }
 function gameOver() {
     dead=true;
@@ -145,7 +142,7 @@ function gameOver() {
 }
 function msg(t,type){const e=$('bb-msg');e.textContent=t;e.className='bb-msg'+(type?` ${type}`:'');}
 
-/* ══ РЕНДЕР ДОСКИ ══ */
+/* ══ ДОСКА ══ */
 function drawBoard() {
     const brd=$('bb-board');
     brd.querySelectorAll('.bb-cell').forEach(e=>e.remove());
@@ -160,8 +157,8 @@ function drawBoard() {
 function showGhost(shape,row,col,color){
     clearGhost();
     if(!canPlace(shape,row,col)) return false;
-    for(let r=0;r<shape.length;r++) for(let c=0;c<shape[r].length;c++) if(shape[r][c]){
-        const el=$('bb-board')?.querySelector(`[data-r="${row+r}"][data-c="${col+c}"]`);
+    for(let dr=0;dr<shape.length;dr++) for(let dc=0;dc<shape[dr].length;dc++) if(shape[dr][dc]){
+        const el=$('bb-board')?.querySelector(`[data-r="${row+dr}"][data-c="${col+dc}"]`);
         if(el){el.classList.add('ghost','filled');el.style.background=color;}
     }
     return true;
@@ -175,13 +172,17 @@ function clearGhost(){
     });
 }
 
-/* ══ DRAG & DROP ФИГУР ══ */
-let dragIdx=null, dragGhost=null;
+/* ══ DRAG & DROP — КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ ══
+   dragOffX/Y = смещение курсора относительно ВЕРХНЕГО ЛЕВОГО угла ghost
+   При поиске клетки ищем точку (ghostLeft + GHOST_CELL/2, ghostTop + GHOST_CELL/2)
+   — это центр первой (верхней левой) ячейки ghost → точно совпадает с тем, что видит игрок
+*/
+let dragIdx=null, dragGhost=null, dragOffX=0, dragOffY=0;
 
 function buildGhostEl(piece) {
     const el=document.createElement('div');
     el.className='bb-drag-ghost';
-    el.style.gridTemplateColumns=`repeat(${piece.shape[0].length}, 26px)`;
+    el.style.gridTemplateColumns=`repeat(${piece.shape[0].length},${GHOST_CELL}px)`;
     piece.shape.forEach(row=>row.forEach(v=>{
         const c=document.createElement('div');
         c.className='bb-dc';
@@ -193,40 +194,56 @@ function buildGhostEl(piece) {
     return el;
 }
 
-function moveDragGhost(cx,cy){
-    if(!dragGhost) return;
-    const gh=dragGhost;
-    const gw=gh.offsetWidth||0, gh_h=gh.offsetHeight||0;
-    gh.style.left=(cx-gw/2)+'px';
-    gh.style.top=(cy-gh_h/2)+'px';
-    // найти клетку под курсором
-    gh.style.visibility='hidden';
-    const el=document.elementFromPoint(cx,cy);
-    gh.style.visibility='';
-    const p=pieces[dragIdx];
-    if(el?.classList.contains('bb-cell')){
-        showGhost(p.shape,+el.dataset.r,+el.dataset.c,p.color);
-    } else {
+function startDrag(idx, cx, cy, pgridEl) {
+    dragIdx = idx;
+    // смещение = где курсор внутри pgrid (= верхний левый угол ghost)
+    const rect = pgridEl.getBoundingClientRect();
+    dragOffX = cx - rect.left;
+    dragOffY = cy - rect.top;
+    dragGhost = buildGhostEl(pieces[idx]);
+    moveDragGhost(cx, cy);
+    $(`bb-s${idx}`)?.classList.add('dragging');
+}
+
+function moveDragGhost(cx, cy) {
+    if (!dragGhost) return;
+    const gl = cx - dragOffX;
+    const gt = cy - dragOffY;
+    dragGhost.style.left = gl + 'px';
+    dragGhost.style.top  = gt + 'px';
+
+    // Ищем клетку под верхним левым углом ghost (+half cell чтобы попасть в центр первой ячейки)
+    dragGhost.style.visibility = 'hidden';
+    const el = document.elementFromPoint(gl + GHOST_CELL/2, gt + GHOST_CELL/2);
+    dragGhost.style.visibility = '';
+
+    const p = pieces[dragIdx];
+    if (el?.classList.contains('bb-cell'))
+        showGhost(p.shape, +el.dataset.r, +el.dataset.c, p.color);
+    else
         clearGhost();
-    }
 }
 
-function endDrag(cx,cy){
-    if(dragGhost){dragGhost.remove();dragGhost=null;}
+function endDrag(cx, cy) {
+    if (!dragGhost) return;
+    const gl = cx - dragOffX;
+    const gt = cy - dragOffY;
+
+    dragGhost.remove(); dragGhost = null;
     clearGhost();
-    if(dragIdx===null) return;
-    const el=(() => {
-        const tmp=document.elementFromPoint(cx,cy);
-        return tmp?.classList.contains('bb-cell') ? tmp : null;
-    })();
-    const idx=dragIdx; dragIdx=null;
-    const slot=$(`bb-s${idx}`);
-    if(slot) slot.classList.remove('dragging');
-    if(el && !dead) doPlace(idx,+el.dataset.r,+el.dataset.c);
+    $(`bb-s${dragIdx}`)?.classList.remove('dragging');
+
+    const el = document.elementFromPoint(gl + GHOST_CELL/2, gt + GHOST_CELL/2);
+    const idx = dragIdx; dragIdx = null;
+
+    if (el?.classList.contains('bb-cell') && !dead)
+        doPlace(idx, +el.dataset.r, +el.dataset.c);
+    else
+        drawPieces(); // перерисовать без dragging-класса
 }
 
-/* ══ РЕНДЕР ФИГУР ══ */
-function drawPieces(){
+/* ══ ФИГУРЫ ══ */
+function drawPieces() {
     for(let i=0;i<3;i++){
         const old=$(`bb-s${i}`);
         const slot=old.cloneNode(false);
@@ -234,30 +251,25 @@ function drawPieces(){
         old.parentNode.replaceChild(slot,old);
         const p=pieces[i];
         slot.className='bb-slot'+(p.used?' used':'');
-        if(p.used) return;  // пропустить слушатели для использованных
+        if(p.used) continue;
 
-        // MOUSE drag
-        slot.addEventListener('mousedown',e=>{
-            if(p.used||dead) return;
+        // MOUSE
+        slot.addEventListener('mousedown', e => {
+            if(dead) return;
             e.preventDefault(); e.stopPropagation();
-            dragIdx=i;
-            slot.classList.add('dragging');
-            dragGhost=buildGhostEl(p);
-            moveDragGhost(e.clientX,e.clientY);
+            const pgrid = slot.querySelector('.bb-pgrid');
+            startDrag(i, e.clientX, e.clientY, pgrid||slot);
         });
-
-        // TOUCH drag
-        slot.addEventListener('touchstart',e=>{
-            if(p.used||dead) return;
+        // TOUCH
+        slot.addEventListener('touchstart', e => {
+            if(dead) return;
             e.stopPropagation();
-            dragIdx=i;
-            slot.classList.add('dragging');
-            dragGhost=buildGhostEl(p);
             const t=e.touches[0];
-            moveDragGhost(t.clientX,t.clientY);
-        },{passive:true});
+            const pgrid = slot.querySelector('.bb-pgrid');
+            startDrag(i, t.clientX, t.clientY, pgrid||slot);
+        }, {passive:true});
 
-        // рендер миниатюры фигуры
+        // рендер миниатюры
         const g=document.createElement('div');
         g.className='bb-pgrid';
         g.style.gridTemplateColumns=`repeat(${p.shape[0].length},18px)`;
@@ -273,15 +285,15 @@ function drawPieces(){
     }
 }
 
-/* глобальные mouse/touch move+up */
-document.addEventListener('mousemove',e=>{if(dragIdx!==null) moveDragGhost(e.clientX,e.clientY);});
-document.addEventListener('mouseup',  e=>{if(dragIdx!==null) endDrag(e.clientX,e.clientY);});
-document.addEventListener('touchmove',e=>{
+/* глобальные move/up */
+document.addEventListener('mousemove', e => { if(dragIdx!==null) moveDragGhost(e.clientX,e.clientY); });
+document.addEventListener('mouseup',   e => { if(dragIdx!==null) endDrag(e.clientX,e.clientY); });
+document.addEventListener('touchmove', e => {
     if(dragIdx===null) return;
     e.preventDefault();
     const t=e.touches[0]; moveDragGhost(t.clientX,t.clientY);
 },{passive:false});
-document.addEventListener('touchend',e=>{
+document.addEventListener('touchend', e => {
     if(dragIdx===null) return;
     const t=e.changedTouches[0]; endDrag(t.clientX,t.clientY);
 });
@@ -290,4 +302,4 @@ $('bb-again').addEventListener('click',    e=>{e.stopPropagation();newGame();});
 $('bb-again').addEventListener('touchend', e=>{e.preventDefault();e.stopPropagation();newGame();});
 
 newGame();
-console.log('🎮 [BlockBlast] v1.3 drag&drop ready!');
+console.log('🎮 [BlockBlast] v1.4 ready');
