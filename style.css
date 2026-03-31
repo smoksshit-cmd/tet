@@ -1,11 +1,9 @@
-
-/* === КНОПКА ОТКРЫТИЯ === */
 .bb-btn {
     position: fixed;
     bottom: 80px;
     right: 16px;
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     background: #e94560;
     color: #fff;
@@ -13,31 +11,31 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
+    cursor: grab;
     z-index: 9999;
     box-shadow: 0 4px 14px rgba(233,69,96,0.5);
-    transition: transform 0.15s, box-shadow 0.15s;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.3s;
     user-select: none;
     touch-action: none;
 }
-.bb-btn:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 20px rgba(233,69,96,0.7);
+.bb-btn:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(233,69,96,0.7); }
+.bb-btn:active { cursor: grabbing; }
+.bb-btn.bb-gen { background: #f5a623; animation: bb-pulse 1s infinite alternate; }
+@keyframes bb-pulse {
+    from { box-shadow: 0 4px 14px rgba(245,166,35,0.5); }
+    to   { box-shadow: 0 6px 24px rgba(245,166,35,0.9); }
 }
 
-/* === ПАНЕЛЬ ИГРЫ === */
 .bb-panel {
     display: none;
     position: fixed;
-    bottom: 136px;
-    right: 16px;
     width: 320px;
-    background: var(--secondaryBg, rgba(18, 18, 30, 0.98));
+    background: var(--secondaryBg, rgba(16,16,28,0.98));
     border: 1.5px solid #e94560;
     border-radius: 14px;
     padding: 12px 10px 10px;
     z-index: 9998;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.75);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.8);
     flex-direction: column;
     align-items: center;
     gap: 8px;
@@ -47,7 +45,6 @@
 }
 .bb-panel.open { display: flex; }
 
-/* шапка */
 .bb-header {
     display: flex;
     justify-content: space-between;
@@ -63,7 +60,8 @@
 .bb-best { font-size: 10px; color: #444; }
 .bb-best span { color: #f5a623; }
 
-/* поле */
+.bb-board-wrap { position: relative; }
+
 .bb-board {
     display: grid;
     grid-template-columns: repeat(8, 34px);
@@ -73,7 +71,6 @@
     padding: 4px;
     border-radius: 8px;
     border: 1px solid rgba(233,69,96,0.3);
-    position: relative;
 }
 .bb-cell {
     width: 34px; height: 34px;
@@ -82,12 +79,11 @@
     cursor: pointer;
     transition: background 0.07s;
 }
-.bb-cell.filled { box-shadow: inset 0 -3px rgba(0,0,0,0.3); border-radius: 3px; }
+.bb-cell.filled { box-shadow: inset 0 -3px rgba(0,0,0,0.3); }
 .bb-cell.ghost  { opacity: 0.38; }
 .bb-cell.flash  { animation: bb-flash 0.28s; }
 @keyframes bb-flash { 0% { filter: brightness(4); } 100% { filter: brightness(1); } }
 
-/* фигуры */
 .bb-pieces {
     display: flex;
     justify-content: space-around;
@@ -108,9 +104,9 @@
     transition: border-color 0.18s, transform 0.15s;
     padding: 4px 2px;
 }
-.bb-slot:hover:not(.used)   { border-color: #e94560; transform: scale(1.07); }
-.bb-slot.used               { opacity: 0.15; cursor: not-allowed; }
-.bb-slot.selected           { border-color: #f5a623; }
+.bb-slot:hover:not(.used) { border-color: #e94560; transform: scale(1.07); }
+.bb-slot.used     { opacity: 0.15; cursor: not-allowed; }
+.bb-slot.selected { border-color: #f5a623; }
 .bb-pgrid { display: grid; gap: 2px; }
 .bb-pcell {
     width: 18px; height: 18px;
@@ -118,12 +114,10 @@
     box-shadow: inset 0 -2px rgba(0,0,0,0.28);
 }
 
-/* сообщение */
 .bb-msg { font-size: 11px; color: #555; min-height: 15px; text-align: center; }
 .bb-msg.good { color: #4caf50; font-weight: bold; }
 .bb-msg.bad  { color: #e94560; }
 
-/* оверлей конец игры */
 .bb-over {
     display: none;
     position: absolute;
