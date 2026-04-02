@@ -74,7 +74,6 @@
 .bb-pgrid { display: grid; gap: 2px; pointer-events: none; }
 .bb-pcell { border-radius: 3px; box-shadow: inset 0 -2px rgba(0,0,0,0.28); pointer-events: none; }
 
-/* ghost следует за пальцем */
 .bb-drag-ghost {
     position: fixed; pointer-events: none; z-index: 99999;
     display: grid; gap: 3px; opacity: 0.88;
@@ -103,3 +102,304 @@
     font-size: 13px; font-weight: bold; touch-action: manipulation;
 }
 .bb-over button:hover { background: #c73652; }
+
+/* ═══════════════════════════════════════
+   ВЫБОР ИГРЫ (ПИКЕР) — 4 карточки
+═══════════════════════════════════════ */
+.bb-picker {
+    display: none; position: fixed;
+    width: 280px;
+    background: var(--secondaryBg, rgba(16,16,28,0.98));
+    border: 1.5px solid #e94560; border-radius: 12px;
+    padding: 12px 10px; z-index: 10001;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.85);
+    font-family: var(--mainFontFamily, 'Segoe UI', sans-serif);
+    user-select: none; -webkit-user-select: none;
+    box-sizing: border-box;
+}
+.bb-picker.open { display: block; }
+
+.bb-picker-title {
+    color: #666; font-size: 10px; text-transform: uppercase;
+    letter-spacing: 1.5px; text-align: center; margin-bottom: 10px;
+}
+.bb-picker-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.bb-game-card {
+    flex: 1 1 calc(50% - 9px); min-width: 0;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 6px; padding: 10px 4px;
+    border-radius: 10px; cursor: pointer;
+    border: 1.5px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    transition: border-color 0.15s, background 0.15s;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+}
+.bb-game-card:hover  { border-color: #e94560; background: rgba(233,69,96,0.1); }
+.bb-game-card:active { border-color: #e94560; background: rgba(233,69,96,0.15); }
+.bb-game-card.active { border-color: #f5a623; background: rgba(245,166,35,0.1); }
+
+.bb-game-icon { font-size: 24px; line-height: 1; }
+.bb-game-name { font-size: 10px; color: #bbb; font-weight: bold; text-align: center; }
+
+/* ═══════════════════════════════════════
+   САПЁР
+═══════════════════════════════════════ */
+.ms-stats {
+    display: flex; gap: 10px; align-items: center;
+}
+.ms-stats span { font-size: 12px; color: #f5a623; font-weight: bold; }
+
+.ms-board {
+    display: grid;
+    gap: 2px; width: 100%; max-width: 284px;
+    background: rgba(10,20,50,0.7); padding: 3px;
+    border-radius: 7px; border: 1px solid rgba(233,69,96,0.3);
+    box-sizing: border-box;
+}
+
+.ms-cell {
+    aspect-ratio: 1;
+    background: rgba(36,50,92,0.9);
+    border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: bold; line-height: 1;
+    cursor: pointer; touch-action: none;
+    transition: background 0.08s;
+    user-select: none; -webkit-user-select: none;
+    border: 1px solid rgba(255,255,255,0.07);
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+.ms-cell:hover:not(.revealed) { background: rgba(55,78,148,0.9); }
+.ms-cell.revealed {
+    background: rgba(14,22,48,0.9);
+    border-color: rgba(255,255,255,0.03);
+    cursor: default;
+}
+.ms-cell.mine-hit    { background: rgba(233,69,96,0.8) !important; }
+.ms-cell.mine-reveal { background: rgba(20,20,42,0.95); }
+
+.ms-n1 { color: #64b5f6; }
+.ms-n2 { color: #81c784; }
+.ms-n3 { color: #ef5350; }
+.ms-n4 { color: #ba68c8; }
+.ms-n5 { color: #ff7043; }
+.ms-n6 { color: #26c6da; }
+.ms-n7 { color: #ec407a; }
+.ms-n8 { color: #90a4ae; }
+
+.ms-footer {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 5px; width: 100%;
+}
+.ms-hint { font-size: 10px; color: #444; text-align: center; }
+
+.ms-difficulty { display: flex; gap: 5px; }
+.ms-diff-btn {
+    background: rgba(255,255,255,0.05); color: #666;
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+    padding: 3px 12px; font-size: 11px; cursor: pointer;
+    transition: all 0.15s; touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+.ms-diff-btn:hover  { border-color: #e94560; color: #ddd; }
+.ms-diff-btn.active { background: rgba(233,69,96,0.18); color: #e94560; border-color: #e94560; }
+
+/* ═══════════════════════════════════════
+   2048
+═══════════════════════════════════════ */
+.g2048-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    width: 100%; max-width: 284px;
+    background: #776e65;
+    padding: 4px;
+    border-radius: 7px;
+    box-sizing: border-box;
+}
+
+.g2048-cell {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; font-size: 18px; line-height: 1;
+    background: rgba(205,193,180,0.35);
+    color: transparent;
+    user-select: none;
+    transition: background 0.08s, font-size 0.08s;
+}
+
+.g2048-v2    { background: #eee4da; color: #776e65; font-size: 18px; }
+.g2048-v4    { background: #ede0c8; color: #776e65; font-size: 18px; }
+.g2048-v8    { background: #f2b179; color: #f9f6f2; font-size: 18px; }
+.g2048-v16   { background: #f59563; color: #f9f6f2; font-size: 16px; }
+.g2048-v32   { background: #f67c5f; color: #f9f6f2; font-size: 16px; }
+.g2048-v64   { background: #f65e3b; color: #f9f6f2; font-size: 16px; }
+.g2048-v128  { background: #edcf72; color: #f9f6f2; font-size: 14px; }
+.g2048-v256  { background: #edcc61; color: #f9f6f2; font-size: 14px; }
+.g2048-v512  { background: #edc850; color: #f9f6f2; font-size: 14px; }
+.g2048-v1024 { background: #edc53f; color: #f9f6f2; font-size: 12px; }
+.g2048-v2048 { background: #edc22e; color: #f9f6f2; font-size: 12px; box-shadow: 0 0 18px rgba(237,194,46,0.7); }
+.g2048-vmax  { background: #3c3a32; color: #f9f6f2; font-size: 10px; }
+
+/* ═══════════════════════════════════════
+   МЕМОРИ
+═══════════════════════════════════════ */
+.mem-panel {
+    width: min(400px, 92vw);
+}
+
+.mem-hdr-right {
+    display: flex; align-items: center; gap: 10px;
+}
+.mem-timer-box {
+    display: flex; align-items: center; gap: 3px;
+    background: rgba(233,69,96,0.12); border: 1px solid rgba(233,69,96,0.3);
+    border-radius: 8px; padding: 2px 8px;
+}
+.mem-timer-label { font-size: 12px; }
+.mem-timer-val {
+    font-size: 16px; font-weight: bold; color: #f5a623;
+    min-width: 28px; text-align: right;
+    transition: color 0.3s;
+}
+.mem-level-box {
+    font-size: 12px; color: #888; font-weight: bold;
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px; padding: 2px 8px;
+}
+
+.mem-subhdr {
+    display: flex; justify-content: space-between;
+    align-items: center; width: 100%;
+    font-size: 10px; color: #555; padding: 0 2px;
+}
+.mem-best-txt { color: #f5a623; }
+
+/* Доска */
+.mem-board {
+    display: grid;
+    gap: 6px;
+    width: 100%;
+    padding: 6px;
+    background: rgba(10,20,50,0.5);
+    border-radius: 8px;
+    border: 1px solid rgba(233,69,96,0.2);
+    box-sizing: border-box;
+}
+
+/* Карточка — 3D переворот */
+.mem-card {
+    cursor: pointer;
+    perspective: 400px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    border-radius: 6px;
+    aspect-ratio: 3 / 4;
+}
+
+.mem-card-inner {
+    position: relative;
+    width: 100%; height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 6px;
+}
+
+.mem-card.flipped .mem-card-inner,
+.mem-card.matched .mem-card-inner {
+    transform: rotateY(180deg);
+}
+
+.mem-card-back,
+.mem-card-front {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1.5px solid rgba(255,255,255,0.12);
+}
+
+.mem-card-back img,
+.mem-card-front img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 4px;
+    user-select: none;
+    pointer-events: none;
+}
+
+.mem-card-front {
+    transform: rotateY(180deg);
+}
+
+/* Состояния карточки */
+.mem-card:hover:not(.flipped):not(.matched) .mem-card-inner {
+    transform: rotateY(8deg) scale(1.02);
+}
+
+.mem-card.matched .mem-card-inner {
+    transition: transform 0.4s, box-shadow 0.3s;
+}
+.mem-card.matched {
+    filter: brightness(1.15) saturate(1.2);
+}
+.mem-card.matched .mem-card-back,
+.mem-card.matched .mem-card-front {
+    border-color: #f5a623;
+    box-shadow: 0 0 8px rgba(245,166,35,0.6);
+}
+
+/* Game over для мемори */
+.mem-over-btns {
+    display: flex; gap: 8px; flex-direction: column; align-items: center;
+}
+#mem-over-next {
+    background: #4caf50;
+}
+#mem-over-next:hover { background: #388e3c; }
+
+/* Кнопка рестарта */
+.mem-restart {
+    background: rgba(255,255,255,0.06); color: #666;
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+    padding: 3px 12px; font-size: 11px; cursor: pointer;
+    transition: all 0.15s; touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+.mem-restart:hover { border-color: #e94560; color: #ddd; }
+.mem-footer-btns { display: flex; gap: 6px; align-items: center; }
+.mem-reset { color: #888; }
+.mem-reset:hover { border-color: #f5a623; color: #f5a623; }
+
+
+/* ═══════════════════════════════════════
+   FLAPPY BIRD
+═══════════════════════════════════════ */
+.fb-panel { width: 310px; }
+
+.fb-wrap {
+    width: 100%; display: flex; justify-content: center;
+}
+
+.fb-canvas {
+    border-radius: 8px;
+    border: 1px solid rgba(233,69,96,0.3);
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+.fb-help {
+    font-size: 11px; color: #555;
+    text-align: center; min-height: 16px;
+}
