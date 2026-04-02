@@ -1165,8 +1165,8 @@ flappyPanel.addEventListener('touchend', e => e.stopPropagation());
 /* — game constants — */
 const FB_W=288, FB_H=320, FB_GROUND_H=32;
 const FB_BIRD_X=60, FB_BIRD_R=11;
-const FB_PIPE_W=44, FB_GAP=82, FB_SPEED=2;
-const FB_GRAVITY=0.33, FB_FLAP=-6.5;
+const FB_PIPE_W=44, FB_GAP=115, FB_SPEED=1.4;
+const FB_GRAVITY=0.25, FB_FLAP=-5.5;
 
 /* — game state — */
 let fbState=0; // 0=HOME 1=PLAY 2=DEAD
